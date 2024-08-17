@@ -13,12 +13,14 @@ import github.runoob09.request.UserSearchRequest;
 import github.runoob09.service.UserService;
 import github.runoob09.mapper.UserMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -145,6 +147,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         safeUser.setUserStatus(user.getUserStatus());
         safeUser.setIsDelete(user.getIsDelete());
         safeUser.setUserRole(user.getUserRole());
+        safeUser.setUserTags(user.getUserTags());
         safeUser.setCreateTime(user.getCreateTime());
         safeUser.setUpdateTime(user.getUpdateTime());
         return safeUser;
@@ -249,5 +252,70 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         session.removeAttribute(USER_LOGIN_STATE);
         log.info("User logout successful, id is {}.", user.getId());
         return true;
+    }
+
+    /**
+     * 根据标签搜索对应的用户
+     *
+     * @param tagNameList
+     * @return
+     */
+    @Override
+    public List<User> searchUsersByTags(List<String> tagNameList) {
+        if (CollectionUtils.isEmpty(tagNameList)) {
+            log.error("Tag name list is empty.");
+            throw BusinessException.of(ResultEnum.PARAM_ERROR, "标签列表不能为空");
+        }
+        List<User> userList = null;
+        CompletableFuture<List<User>> task1 = CompletableFuture.supplyAsync(() -> searchUsersByTagsInMysql(tagNameList));
+        CompletableFuture<List<User>> task2 = CompletableFuture.supplyAsync(() -> searchUsersByTagsInMemory(tagNameList));
+        CompletableFuture<Object> result = CompletableFuture.anyOf(task1, task2);
+        try {
+            userList = (List<User>) result.get();
+        } catch (Exception e) {
+            log.error("Search users by tags failed, error message is {}", e.getMessage());
+            throw BusinessException.of(ResultEnum.SYSTEM_ERROR, "无法获取到查询结果");
+        }
+        // 取消对应任务
+        task1.cancel(true);
+        task2.cancel(true);
+        return userList;
+    }
+
+    /**
+     * 在mysql内利用标签进行查询
+     */
+    private List<User> searchUsersByTagsInMysql(List<String> tagNameList) {
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        for (String s : tagNameList) {
+            queryWrapper = queryWrapper.like(User::getUserTags, s);
+        }
+        List<User> userList = list(queryWrapper);
+        userList = userList.stream().map(this::convertToSafeUser).toList();
+        return userList;
+    }
+
+    /**
+     * 在内存内利用标签进行查询
+     */
+    private List<User> searchUsersByTagsInMemory(List<String> tagNameList) {
+        // 查询全部的用户
+        List<User> userList = list();
+        userList = userList.parallelStream().filter(user -> {
+            // 获取用户的标签列表
+            List<String> tags = user.getUserTags();
+            if (CollectionUtils.isEmpty(tags)) {
+                return false;
+            }
+            // 遍历用户的标签列表
+            for (String tagName : tagNameList) {
+                // 如果用户标签列表不包含该标签，则返回false
+                if (!tags.contains(tagName)) {
+                    return false;
+                }
+            }
+            return true;
+        }).map(this::convertToSafeUser).toList();
+        return userList;
     }
 }

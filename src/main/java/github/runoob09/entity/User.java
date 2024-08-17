@@ -4,13 +4,13 @@ import com.baomidou.mybatisplus.annotation.*;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 import github.runoob09.constant.BasicConstant;
 import github.runoob09.constant.UserConstant;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 
 /**
  * @TableName user
@@ -76,7 +76,10 @@ public class User implements Serializable {
      * 用户角色 0-普通用户 1-管理员
      */
     private Integer userRole;
-
+    /**
+     * 标签列表
+     */
+    private List<String> userTags;
     /**
      * 创建时间
      */

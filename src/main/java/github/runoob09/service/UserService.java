@@ -63,4 +63,11 @@ public interface UserService extends IService<User> {
      * @return 退出登录的状态
      */
     Boolean logout(HttpServletRequest request);
+
+    /**
+     * 根据标签搜索对应的用户
+     * @param tagNameList 需要查询的标签列表
+     * @return 查询到的用户列表
+     */
+    List<User> searchUsersByTags(List<String> tagNameList);
 }

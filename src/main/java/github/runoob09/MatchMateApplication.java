@@ -6,10 +6,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 @MapperScan(basePackages = "github.runoob09.mapper")
-public class UserCenterApplication {
+public class MatchMateApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(UserCenterApplication.class, args);
+        SpringApplication.run(MatchMateApplication.class, args);
     }
 
 }
