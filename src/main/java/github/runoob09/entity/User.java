@@ -3,6 +3,7 @@ package github.runoob09.entity;
 import com.baomidou.mybatisplus.annotation.*;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -90,6 +91,8 @@ public class User implements Serializable {
      */
     private Date updateTime;
 
+    private String userProfile;
+
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
 
@@ -126,6 +129,8 @@ public class User implements Serializable {
         userRole = UserConstant.Role.USER;
         // 随机生成一个username
         username = "user_" + userAccount;
+        // 设置空的标签
+        userTags = new ArrayList<>();
         // 设置用户的默认头像
         avatarUrl = "https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png";
     }

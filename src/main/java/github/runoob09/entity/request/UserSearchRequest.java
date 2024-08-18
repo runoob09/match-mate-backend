@@ -1,6 +1,8 @@
-package github.runoob09.request;
+package github.runoob09.entity.request;
 
 import lombok.Data;
+
+import java.util.List;
 
 /**
  * @author runoob09
@@ -31,4 +33,8 @@ public class UserSearchRequest {
      * 用户性别
      */
     private Integer gender;
+    /**
+     * 标签
+     */
+    private List<String> userTags;
 }

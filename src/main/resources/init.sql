@@ -16,6 +16,7 @@ create table if not exists `user`
     is_delete     tinyint comment "是否删除 0-未删除 1-已删除",
     user_role     int comment "用户角色 0-普通用户 1-管理员",
     user_tags     varchar(1024) comment "用户标签（json字符串）",
+    user_profile  varchar(1024) comment "用户简介",
     create_time   timestamp default CURRENT_TIMESTAMP comment "创建时间",
     update_time   timestamp default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP comment "更新时间"
 ) comment "用户表";

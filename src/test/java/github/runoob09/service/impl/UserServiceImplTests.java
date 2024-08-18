@@ -2,9 +2,9 @@ package github.runoob09.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import github.runoob09.entity.User;
-import github.runoob09.request.UserRegisterRequest;
+import github.runoob09.entity.request.UserRegisterRequest;
 import github.runoob09.mapper.UserMapper;
-import github.runoob09.request.UserSearchRequest;
+import github.runoob09.entity.request.UserSearchRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

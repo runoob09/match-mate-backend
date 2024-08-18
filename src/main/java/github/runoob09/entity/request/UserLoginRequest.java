@@ -1,4 +1,4 @@
-package github.runoob09.request;
+package github.runoob09.entity.request;
 
 import lombok.Data;
 

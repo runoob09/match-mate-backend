@@ -2,8 +2,8 @@ package github.runoob09.service;
 
 import github.runoob09.entity.User;
 import com.baomidou.mybatisplus.extension.service.IService;
-import github.runoob09.request.UserRegisterRequest;
-import github.runoob09.request.UserSearchRequest;
+import github.runoob09.entity.request.UserRegisterRequest;
+import github.runoob09.entity.request.UserSearchRequest;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;

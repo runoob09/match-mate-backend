@@ -4,11 +4,12 @@ import github.runoob09.common.exception.BusinessException;
 import github.runoob09.common.result.BasicResult;
 import github.runoob09.common.result.ResultEnum;
 import github.runoob09.entity.User;
-import github.runoob09.request.UserLoginRequest;
-import github.runoob09.request.UserRegisterRequest;
-import github.runoob09.request.UserSearchRequest;
+import github.runoob09.entity.request.UserLoginRequest;
+import github.runoob09.entity.request.UserRegisterRequest;
+import github.runoob09.entity.request.UserSearchRequest;
 import github.runoob09.service.UserService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -95,8 +96,28 @@ public class UserController {
         return BasicResult.success(userService.currentUser(request));
     }
 
+    /**
+     * 用户登出方法
+     * @param request
+     * @return
+     */
     @GetMapping("logout")
     public BasicResult<Boolean> logout(HttpServletRequest request) {
         return BasicResult.success(userService.logout(request));
+    }
+
+    /**
+     * 根据标签查找对应的用户
+     */
+    @GetMapping("search/tags")
+    public BasicResult<List<User>> searchUsersByTags(@ModelAttribute UserSearchRequest request) {
+        List<String> userTags = request.getUserTags();
+        if (CollectionUtils.isEmpty(userTags)){
+            log.error("userTags cannot be empty");
+            throw BusinessException.of(ResultEnum.PARAM_ERROR,"查询标签不能为空");
+        }
+        List<User> userList = userService.searchUsersByTags(userTags);
+        log.info("using tags {},found {} users",userTags ,userList.size());
+        return BasicResult.success(userList);
     }
 }
