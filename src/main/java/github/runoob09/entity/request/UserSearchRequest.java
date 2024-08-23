@@ -37,4 +37,8 @@ public class UserSearchRequest {
      * 标签
      */
     private List<String> userTags;
+
+    private Long pageNum;
+
+    private Long pageSize;
 }

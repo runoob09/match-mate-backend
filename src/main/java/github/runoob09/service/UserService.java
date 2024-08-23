@@ -16,6 +16,7 @@ import java.util.List;
 public interface UserService extends IService<User> {
     /**
      * 执行用户注册的方法
+     *
      * @param userRegisterRequest 用户注册的请求封装类
      * @return
      */
@@ -23,7 +24,8 @@ public interface UserService extends IService<User> {
 
     /**
      * 执行登陆操作
-     * @param userAccount 用户账号
+     *
+     * @param userAccount  用户账号
      * @param userPassword 用户名
      * @return 用户对象
      */
@@ -31,6 +33,7 @@ public interface UserService extends IService<User> {
 
     /**
      * 用户脱敏工具类
+     *
      * @param user 原用户对象
      * @return 脱敏后的用户对象
      */
@@ -38,6 +41,7 @@ public interface UserService extends IService<User> {
 
     /**
      * 查询用户的服务类
+     *
      * @param request 用户请求实体类
      * @return 查询到的用户列表
      */
@@ -45,6 +49,7 @@ public interface UserService extends IService<User> {
 
     /**
      * 删除指定id的用户
+     *
      * @param userId 用户的唯一id
      * @return 执行的状态
      */
@@ -52,13 +57,15 @@ public interface UserService extends IService<User> {
 
     /**
      * 获取当前用户
+     *
      * @param request 当前的请求对象
      * @return 当前已登录的用户信息
      */
-    User currentUser(HttpServletRequest request);
+    User currentUser();
 
     /**
      * 用户退出登录的方法
+     *
      * @param request 当前的请求对象
      * @return 退出登录的状态
      */
@@ -66,8 +73,18 @@ public interface UserService extends IService<User> {
 
     /**
      * 根据标签搜索对应的用户
+     *
      * @param tagNameList 需要查询的标签列表
      * @return 查询到的用户列表
      */
-    List<User> searchUsersByTags(List<String> tagNameList);
+    List<User> searchUsersByTags(List<String> tagNameList, Long pageNum, Long pageSize);
+
+    /**
+     * 向userId的用户推荐相似度较高的用户
+     * @param userId 用户id
+     * @param pageNum 页码数
+     * @param pageSize 页大小
+     * @return 为userId生成的推荐用户
+     */
+    List<User> recommendUsers(Long userId,Long pageNum, Long pageSize);
 }

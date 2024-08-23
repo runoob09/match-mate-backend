@@ -65,7 +65,7 @@ class UserServiceImplTests {
         assertEquals(-1L, result);
 
         verify(userMapper, times(1)).selectOne(any());
-        verify(userMapper, never()).insert(any());
+        verify(userMapper, never()).insert((User) any());
     }
 
     @Test
@@ -78,7 +78,7 @@ class UserServiceImplTests {
         assertEquals(-1L, result);
 
         verify(userMapper, never()).selectOne(any());
-        verify(userMapper, never()).insert(any());
+        verify(userMapper, never()).insert((User) any());
     }
 
     @Test
@@ -89,7 +89,7 @@ class UserServiceImplTests {
         assertEquals(-1L, result);
 
         verify(userMapper, never()).selectOne(any());
-        verify(userMapper, never()).insert(any());
+        verify(userMapper, never()).insert((User) any());
     }
 
     @Test
@@ -100,7 +100,7 @@ class UserServiceImplTests {
         assertEquals(-1L, result);
 
         verify(userMapper, never()).selectOne(any());
-        verify(userMapper, never()).insert(any());
+        verify(userMapper, never()).insert((User) any());
     }
 
     @Test
@@ -112,13 +112,13 @@ class UserServiceImplTests {
         assertEquals(-1L, result);
 
         verify(userMapper, never()).selectOne(any());
-        verify(userMapper, never()).insert(any());
+        verify(userMapper, never()).insert((User) any());
     }
 
     @Test
     void testUserRegister_Success() {
         when(userMapper.selectOne(any())).thenReturn(null);
-        when(userMapper.insert(any())).thenAnswer(invocation -> {
+        when(userMapper.insert((User) any())).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
             user.setId(1L);
             return 1;
@@ -128,7 +128,7 @@ class UserServiceImplTests {
         assertEquals(1L, result);
 
         verify(userMapper, times(1)).selectOne(any());
-        verify(userMapper, times(1)).insert(any());
+        verify(userMapper, times(1)).insert((User) any());
     }
 
     @Test

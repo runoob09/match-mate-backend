@@ -2,21 +2,24 @@ package github.runoob09.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import github.runoob09.constant.BasicConstant;
 import github.runoob09.constant.UserConstant;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.apache.ibatis.type.JdbcType;
 
 /**
  * @TableName user
  */
-@TableName(value = "user")
+@TableName(value = "user", autoResultMap = true, resultMap = "BaseResultMap")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -80,6 +83,7 @@ public class User implements Serializable {
     /**
      * 标签列表
      */
+    @TableField(typeHandler = JacksonTypeHandler.class, jdbcType = JdbcType.VARCHAR, value = "user_tags", javaType = true)
     private List<String> userTags;
     /**
      * 创建时间
@@ -93,31 +97,9 @@ public class User implements Serializable {
 
     private String userProfile;
 
+    @Serial
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
-
-
-    @Override
-    public String toString() {
-        return getClass().getSimpleName() +
-                " [" +
-                "Hash = " + hashCode() +
-                ", id=" + id +
-                ", username=" + username +
-                ", userAccount=" + userAccount +
-                ", avatarUrl=" + avatarUrl +
-                ", gender=" + gender +
-                ", userPassword=" + userPassword +
-                ", phoneNumber=" + phoneNumber +
-                ", email=" + email +
-                ", userStatus=" + userStatus +
-                ", isDelete=" + isDelete +
-                ", userRole=" + userRole +
-                ", createTime=" + createTime +
-                ", updateTime=" + updateTime +
-                ", serialVersionUID=" + serialVersionUID +
-                "]";
-    }
 
     public User(String userAccount, String userPassword) {
         this.userAccount = userAccount;

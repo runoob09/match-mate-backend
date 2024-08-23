@@ -1,8 +1,12 @@
 package github.runoob09.service.impl;
 
+import cn.hutool.core.convert.Convert;
+import cn.hutool.core.lang.TypeReference;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.gson.Gson;
 import github.runoob09.common.annotation.RequireRole;
 import github.runoob09.common.exception.BusinessException;
 import github.runoob09.common.result.ResultEnum;
@@ -10,17 +14,26 @@ import github.runoob09.constant.UserConstant;
 import github.runoob09.entity.User;
 import github.runoob09.entity.request.UserRegisterRequest;
 import github.runoob09.entity.request.UserSearchRequest;
-import github.runoob09.service.UserService;
 import github.runoob09.mapper.UserMapper;
+import github.runoob09.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -46,6 +59,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      * md5加密混淆
      */
     private final static String SALT = "X8s9D2Z3jK4nM6bR";
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
 
     /**
@@ -147,7 +163,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         safeUser.setUserStatus(user.getUserStatus());
         safeUser.setIsDelete(user.getIsDelete());
         safeUser.setUserRole(user.getUserRole());
-        safeUser.setUserTags(user.getUserTags());
+        safeUser.setUserTags(new ArrayList<>(user.getUserTags()));
         safeUser.setCreateTime(user.getCreateTime());
         safeUser.setUpdateTime(user.getUpdateTime());
         return safeUser;
@@ -209,11 +225,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      * @return 当前已登录的用户信息
      */
     @Override
-    public User currentUser(HttpServletRequest request) {
-        if (request == null) {
-            log.error("Request can not be null");
+    public User currentUser() {
+        ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (requestAttributes == null) {
+            log.error("RequestAttributes can not be null");
             throw BusinessException.of(ResultEnum.PARAM_ERROR, "系统不能找到请求对象");
         }
+        HttpServletRequest request = requestAttributes.getRequest();
         User currentUser = (User) request.getSession().getAttribute(USER_LOGIN_STATE);
         if (currentUser == null) {
             log.error("user is not login, cannot find currentUser!");
@@ -255,34 +273,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     /**
-     * 根据标签搜索对应的用户
-     *
-     * @param tagNameList
-     * @return
-     */
-    @Override
-    public List<User> searchUsersByTags(List<String> tagNameList) {
-        if (CollectionUtils.isEmpty(tagNameList)) {
-            log.error("Tag name list is empty.");
-            throw BusinessException.of(ResultEnum.PARAM_ERROR, "标签列表不能为空");
-        }
-        List<User> userList = null;
-        CompletableFuture<List<User>> task1 = CompletableFuture.supplyAsync(() -> searchUsersByTagsInMysql(tagNameList));
-        CompletableFuture<List<User>> task2 = CompletableFuture.supplyAsync(() -> searchUsersByTagsInMemory(tagNameList));
-        CompletableFuture<Object> result = CompletableFuture.anyOf(task1, task2);
-        try {
-            userList = (List<User>) result.get();
-        } catch (Exception e) {
-            log.error("Search users by tags failed, error message is {}", e.getMessage());
-            throw BusinessException.of(ResultEnum.SYSTEM_ERROR, "无法获取到查询结果");
-        }
-        // 取消对应任务
-        task1.cancel(true);
-        task2.cancel(true);
-        return userList;
-    }
-
-    /**
      * 在mysql内利用标签进行查询
      */
     private List<User> searchUsersByTagsInMysql(List<String> tagNameList) {
@@ -290,9 +280,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         for (String s : tagNameList) {
             queryWrapper = queryWrapper.like(User::getUserTags, s);
         }
-        List<User> userList = list(queryWrapper);
-        userList = userList.stream().map(this::convertToSafeUser).toList();
-        return userList;
+        return list(queryWrapper);
     }
 
     /**
@@ -315,7 +303,104 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 }
             }
             return true;
-        }).map(this::convertToSafeUser).toList();
+        }).toList();
         return userList;
     }
+
+    /**
+     * 从mysql中查询数据
+     *
+     * @param tagNameList
+     * @return
+     */
+    private List<User> searchUsersByTags(List<String> tagNameList) {
+        if (CollectionUtils.isEmpty(tagNameList)) {
+            log.error("Tag name list is empty.");
+            throw BusinessException.of(ResultEnum.PARAM_ERROR, "标签列表不能为空");
+        }
+        AtomicReference<List<User>> userList = new AtomicReference<>();
+        CompletableFuture<List<User>> task1 = CompletableFuture.supplyAsync(() -> searchUsersByTagsInMemory(tagNameList));
+        CompletableFuture<List<User>> task2 = CompletableFuture.supplyAsync(() -> searchUsersByTagsInMysql(tagNameList));
+        CompletableFuture.anyOf(
+                task1, task2
+        ).thenAccept(userList1 -> {
+            userList.set(Convert.convert(new TypeReference<List<User>>() {
+            }.getType(), userList1)); // 实现类型转换
+            // 取消两个任务
+            task1.cancel(true);
+            task2.cancel(true);
+        }).join();
+        return userList.get();
+    }
+
+    /**
+     * 根据标签搜索对应的用户
+     *
+     * @param tagNameList
+     * @return
+     */
+    @Override
+    public List<User> searchUsersByTags(List<String> tagNameList, Long pageNum, Long pageSize) {
+        String key = "match-mate:searchUserByTags:" + tagNameList.toString();
+        Gson gson = new Gson();
+        // 参数校验
+        if (CollectionUtils.isEmpty(tagNameList) || pageNum == null || pageSize == null) {
+            log.error("Tag name list is empty.");
+            throw BusinessException.of(ResultEnum.PARAM_ERROR, "标签列表，页码以及页大小不能为空");
+        }
+        if (pageNum < 1 || pageSize < 1) {
+            log.error("Page number or page size is less than 1.");
+            throw BusinessException.of(ResultEnum.PARAM_ERROR, "页码或页大小不能小于1");
+        }
+        if (pageSize > 100) {
+            log.error("Page size is too large.");
+            throw BusinessException.of(ResultEnum.PARAM_ERROR, "页大小不能大于100");
+        }
+        long start = (pageNum - 1) * pageSize; // 计算数据起始位置
+        // 从缓存中查询数据
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
+            // 计算结束页码
+            long end = start+pageSize;
+            if (start > end) { // 起始页码大于结束页码
+                log.warn("The number of users with the specified tags is less than the specified page number.");
+                return Collections.emptyList(); // 返回空数据
+            }
+            List<String> jsonList = redisTemplate.opsForList().range(key, start, end);
+            return jsonList.stream().map(s -> gson.fromJson(s, User.class)).toList();
+        }
+        // 从数据库执行查询
+        List<User> userList = searchUsersByTags(tagNameList);
+        // 计算结束页码
+        long end = Math.min(start + pageSize, userList.size() - 1);
+        if (start > end) {
+            log.warn("The number of users with the specified tags is less than the specified page number.");
+            return Collections.emptyList(); // 返回空数据
+        }
+        // 将数据写入缓存内
+        CompletableFuture.runAsync(() -> {
+            Boolean lock = redisTemplate.opsForValue().setIfAbsent(key, "lock");
+            if (Boolean.TRUE.equals(lock)){
+                redisTemplate.delete(key);
+                redisTemplate.opsForList().rightPushAll(key, userList.stream().map(s -> gson.toJson(s)).toList());
+                redisTemplate.expire(key, 1, TimeUnit.HOURS);
+                log.info("The searchUserByTags data has been written to the cache.");
+            }
+        });
+        return userList.subList((int) start, (int) end);
+    }
+
+    /**
+     * 向userId的用户推荐相似度较高的用户
+     *
+     * @param userId   用户id
+     * @param pageNum  页码数
+     * @param pageSize 页大小
+     * @return 为userId生成的推荐用户
+     */
+    @Override
+    public List<User> recommendUsers(Long userId, Long pageNum, Long pageSize) {
+        // 从数据库中随机获取10个用户
+        return list(new QueryWrapper<User>().last("ORDER BY RAND() LIMIT 10"));
+    }
+
 }

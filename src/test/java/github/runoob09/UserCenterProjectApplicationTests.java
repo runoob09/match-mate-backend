@@ -16,10 +16,6 @@ class UserCenterProjectApplicationTests {
 
     @Test
     void contextLoads() {
-        ArrayList<String> tags = new ArrayList<>();
-        tags.add("java");
-        List<User> userList = userService.searchUsersByTags(tags);
-        System.out.println(userList);
     }
 
 }
